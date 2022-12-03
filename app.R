@@ -84,6 +84,7 @@ server <- function(input, output, session) {
   densities_filter <- reactive({
     
     ##using library to filter it on the website when user selects the group
+    ##this means whole table of densities will print and group and month values are changed so table values will change
     dplyr::filter(
       densities,
       Group %in% densities$Group,
@@ -106,6 +107,10 @@ server <- function(input, output, session) {
   })
   
   ##Need to understand densities_filter
+  ##using na.rm = True means excluding NA values if any 
+  ##|> means that LHS will work first and then RHS
+  ##x %>% f(y) converted into f(x, y)
+  
   geo_data <- reactive({
     dat <- dplyr::group_by(
       densities_filter(),
@@ -116,19 +121,21 @@ server <- function(input, output, session) {
     
     ## Join to spatial data
     ##need to understand the geo_filter
+    ##select() means it will select those particular coloumns
     dplyr::left_join(geo_filter(), dat, by = c("id" = "Stratum")) |>
     dplyr::select(Density)
   })
   
   
   ##Table output 
-  output$Species <- renderDataTable(
+  output$table <- renderDataTable(
     densities_filter(),
     options = list(pageLength = 10)
   )
   
   output$map <- renderLeaflet({
     # Color palette
+    ##range function will take geo_data as the argument and na.rm will eliminate NA values
     rgeo <- range(geo_data()$Density, na.rm = TRUE)
     pal <- leaflet::colorNumeric(
       viridis::viridis_pal(option = "D")(100), 
@@ -143,6 +150,7 @@ server <- function(input, output, session) {
         opacity = 1,
         weight = 1, 
         color = ~pal(geo_data()$Density)) |>
+      
       addLegend(
         position = "bottomright",
         pal = pal,
